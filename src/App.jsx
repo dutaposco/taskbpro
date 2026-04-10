@@ -12,6 +12,14 @@ import './index.css';
 
 const PROJECT_COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#3b82f6', '#6366f1'];
 
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 export default function App() {
   const [view, setView] = useState('board');
   const [projects, setProjects] = useState([]);
@@ -144,6 +152,7 @@ export default function App() {
     const isEdit = !!formData.id;
     const payload = {
       ...formData,
+      id: formData.id || generateUUID(),
       assignee_id: formData.assignee_id || null,
       due_date: formData.due_date || null,
     };
