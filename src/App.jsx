@@ -137,13 +137,16 @@ export default function App() {
   // ----- Task CRUD -----
   const handleSaveTask = async (formData) => {
     const isEdit = !!formData.id;
+    const payload = { ...formData };
+    if (payload.assignee_id === '') payload.assignee_id = null;
+    
     try {
       if (isEdit) {
-        const { data, error } = await supabase.from('tasks').update(formData).eq('id', formData.id).select();
+        const { data, error } = await supabase.from('tasks').update(payload).eq('id', payload.id).select();
         if (error) throw error;
         setTasks(prev => prev.map(t => t.id === data[0].id ? data[0] : t));
       } else {
-        const { data, error } = await supabase.from('tasks').insert([formData]).select();
+        const { data, error } = await supabase.from('tasks').insert([payload]).select();
         if (error) throw error;
         setTasks(prev => [...prev, data[0]]);
       }
