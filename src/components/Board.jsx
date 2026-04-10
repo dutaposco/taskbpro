@@ -39,7 +39,7 @@ export default function Board({ tasks, members, onTaskClick, onAddTask, onStatus
   const isOverdue  = (d) => d && new Date(d) < new Date();
 
   return (
-    <div className="flex gap-8 p-8 h-full overflow-x-auto">
+    <div className="flex gap-4 sm:gap-8 p-4 sm:p-8 h-full overflow-x-auto overflow-y-hidden">
       {COLUMNS.map(col => {
         const colTasks = tasks.filter(t => t.status === col.id);
         const isOver   = dragOver === col.id;
@@ -47,7 +47,7 @@ export default function Board({ tasks, members, onTaskClick, onAddTask, onStatus
         return (
           <div
             key={col.id}
-            className={`flex flex-col w-[320px] min-w-[320px] rounded-2xl transition-all duration-200 ${isOver ? 'bg-slate-200/50' : 'bg-transparent'}`}
+            className={`flex flex-col w-[280px] sm:w-[320px] min-w-[280px] sm:min-w-[320px] rounded-2xl transition-all duration-200 ${isOver ? 'bg-slate-200/50' : 'bg-transparent'}`}
             onDragOver={e => handleDragOver(e, col.id)}
             onDrop={e => handleDrop(e, col.id)}
             onDragLeave={() => setDragOver(null)}
@@ -68,7 +68,7 @@ export default function Board({ tasks, members, onTaskClick, onAddTask, onStatus
             </div>
 
             {/* Column Body */}
-            <div className="flex flex-col gap-4 overflow-y-auto px-1 pb-10 scrollbar-hide">
+            <div className="flex flex-col gap-4 overflow-y-auto px-1 pb-10 scrollbar-hide max-h-[calc(100vh-220px)]">
               <AnimatePresence>
                 {colTasks.map((task, idx) => {
                   const prio     = PRIORITY[task.priority] || PRIORITY.medium;
