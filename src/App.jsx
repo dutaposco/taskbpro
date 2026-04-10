@@ -136,10 +136,18 @@ export default function App() {
 
   // ----- Task CRUD -----
   const handleSaveTask = async (formData) => {
+    if (!formData.project_id) {
+      notify('Pilih project terlebih dahulu sebelum membuat task', 'error');
+      return;
+    }
+
     const isEdit = !!formData.id;
-    const payload = { ...formData };
-    if (payload.assignee_id === '') payload.assignee_id = null;
-    
+    const payload = {
+      ...formData,
+      assignee_id: formData.assignee_id || null,
+      due_date: formData.due_date || null,
+    };
+
     try {
       if (isEdit) {
         const { data, error } = await supabase.from('tasks').update(payload).eq('id', payload.id).select();
@@ -153,7 +161,8 @@ export default function App() {
       setModalOpen(false);
       notify(isEdit ? 'Task diperbarui!' : 'Task dibuat!');
     } catch (e) {
-      notify('Gagal menyimpan task', 'error');
+      console.error('Task save error:', e);
+      notify(e.message || 'Gagal menyimpan task', 'error');
     }
   };
 
@@ -252,7 +261,7 @@ export default function App() {
                   <span className="w-2.5 h-2.5 rounded-full ring-2 ring-white shadow-sm shrink-0" style={{ background: p.color }} />
                   <span className="truncate">{p.name}</span>
                 </div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-2">
                    <button onClick={(e) => { e.stopPropagation(); handleEditProject(p.id, p.name); }} className="hover:text-accent"><Edit3 size={14} /></button>
                    <button onClick={(e) => { e.stopPropagation(); handleDeleteProject(p.id, p.name); }} className="hover:text-red-500"><Trash2 size={14} /></button>
                 </div>
@@ -375,7 +384,7 @@ export default function App() {
                         <h3 className="font-bold text-text-main text-lg truncate">{m.name}</h3>
                         <p className="text-sm font-medium text-text-muted truncate">{m.email}</p>
                       </div>
-                      <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute top-4 right-4 flex gap-2">
                          <button onClick={() => handleEditMember(m)} className="p-1.5 bg-slate-100 rounded text-text-secondary hover:text-accent"><Edit3 size={14}/></button>
                          <button onClick={() => handleDeleteMember(m.id, m.name)} className="p-1.5 bg-slate-100 rounded text-text-secondary hover:text-red-500"><Trash2 size={14}/></button>
                       </div>
