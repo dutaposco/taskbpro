@@ -25,13 +25,13 @@ export default function App() {
     async function fetchData() {
       try {
         const [projRes, memRes, taskRes] = await Promise.all([
-          fetch('http://localhost:5000/api/projects'),
-          fetch('http://localhost:5000/api/members'),
-          fetch('http://localhost:5000/api/tasks')
+          supabase.from('projects').select('*'),
+          supabase.from('members').select('*'),
+          supabase.from('tasks').select('*')
         ]);
-        const projData = await projRes.json();
-        const memData = await memRes.json();
-        const taskData = await taskRes.json();
+        const projData = projRes.data || [];
+        const memData = memRes.data || [];
+        const taskData = taskRes.data || [];
         
         setProjects(projData);
         setMembers(memData);
@@ -62,12 +62,9 @@ export default function App() {
     if (!newProjName.trim()) return;
     try {
       const np = { name: newProjName.trim(), color: PROJECT_COLORS[projects.length % PROJECT_COLORS.length] };
-      const res = await fetch('http://localhost:5000/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(np)
-      });
-      const created = await res.json();
+      const { data, error } = await supabase.from('projects').insert([np]).select();
+      if (error) throw error;
+      const created = data[0];
       setProjects(p => [...p, created]);
       setActiveProject(created);
       setNewProjName(''); setNewProjOpen(false);
@@ -81,11 +78,8 @@ export default function App() {
     const newName = window.prompt("Ubah nama project:", oldName);
     if (!newName || newName === oldName) return;
     try {
-      await fetch(`http://localhost:5000/api/projects/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName })
-      });
+      const { error } = await supabase.from('projects').update({ name: newName }).eq('id', id);
+      if (error) throw error;
       setProjects(prev => prev.map(p => p.id === id ? { ...p, name: newName } : p));
       if (activeProject?.id === id) setActiveProject(prev => ({ ...prev, name: newName }));
       notify('Project berhasil diubah!');
@@ -95,7 +89,8 @@ export default function App() {
   const handleDeleteProject = async (id, name) => {
     if (!window.confirm(`Yakin mau delete project "${name}"? Semua task di dalamnya akan terhapus juga!`)) return;
     try {
-      await fetch(`http://localhost:5000/api/projects/${id}`, { method: 'DELETE' });
+      const { error } = await supabase.from('projects').delete().eq('id', id);
+      if (error) throw error;
       setProjects(prev => prev.filter(p => p.id !== id));
       setTasks(prev => prev.filter(t => t.project_id !== id));
       if (activeProject?.id === id) setActiveProject(projects.find(p => p.id !== id) || null);
@@ -110,13 +105,9 @@ export default function App() {
     const email = window.prompt("Email Member:");
     try {
        const color = PROJECT_COLORS[members.length % PROJECT_COLORS.length];
-       const res = await fetch('http://localhost:5000/api/members', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ name, email: email || '', avatar_color: color })
-       });
-       const created = await res.json();
-       setMembers(prev => [...prev, created]);
+       const { data, error } = await supabase.from('members').insert([{ name, email: email || '', avatar_color: color }]).select();
+       if (error) throw error;
+       setMembers(prev => [...prev, data[0]]);
        notify('Member ditambahkan!');
     } catch { notify('Gagal tambah member', 'error'); }
   };
@@ -126,11 +117,8 @@ export default function App() {
     if (!name) return;
     const email = window.prompt("Ubah email member:", m.email);
     try {
-       await fetch(`http://localhost:5000/api/members/${m.id}`, {
-         method: 'PUT',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ name, email: email || '' })
-       });
+       const { error } = await supabase.from('members').update({ name, email: email || '' }).eq('id', m.id);
+       if (error) throw error;
        setMembers(prev => prev.map(mm => mm.id === m.id ? { ...mm, name, email } : mm));
        notify('Member diubah!');
     } catch { notify('Gagal ubah member', 'error'); }
@@ -139,7 +127,8 @@ export default function App() {
   const handleDeleteMember = async (id, name) => {
     if (!window.confirm(`Yakin delete member "${name}"?`)) return;
     try {
-       await fetch(`http://localhost:5000/api/members/${id}`, { method: 'DELETE' });
+       const { error } = await supabase.from('members').delete().eq('id', id);
+       if (error) throw error;
        setMembers(prev => prev.filter(mm => mm.id !== id));
        notify('Member dihapus!');
     } catch { notify('Gagal hapus member', 'error'); }
@@ -150,21 +139,13 @@ export default function App() {
     const isEdit = !!formData.id;
     try {
       if (isEdit) {
-        const res = await fetch(`http://localhost:5000/api/tasks/${formData.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
-        });
-        const updatedTask = await res.json();
-        setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+        const { data, error } = await supabase.from('tasks').update(formData).eq('id', formData.id).select();
+        if (error) throw error;
+        setTasks(prev => prev.map(t => t.id === data[0].id ? data[0] : t));
       } else {
-        const res = await fetch('http://localhost:5000/api/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
-        });
-        const createdTask = await res.json();
-        setTasks(prev => [...prev, createdTask]);
+        const { data, error } = await supabase.from('tasks').insert([formData]).select();
+        if (error) throw error;
+        setTasks(prev => [...prev, data[0]]);
       }
       setModalOpen(false);
       notify(isEdit ? 'Task diperbarui!' : 'Task dibuat!');
@@ -175,7 +156,8 @@ export default function App() {
 
   const handleDeleteTask = async (id) => {
     try {
-      await fetch(`http://localhost:5000/api/tasks/${id}`, { method: 'DELETE' });
+      const { error } = await supabase.from('tasks').delete().eq('id', id);
+      if (error) throw error;
       setTasks(prev => prev.filter(t => t.id !== id));
       setModalOpen(false);
       notify('Task dihapus!', 'info');
@@ -192,11 +174,8 @@ export default function App() {
     
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus, history: newHistory } : t));
     try {
-      await fetch(`http://localhost:5000/api/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus, history: newHistory })
-      });
+      const { error } = await supabase.from('tasks').update({ status: newStatus, history: newHistory }).eq('id', taskId);
+      if (error) throw error;
     } catch (e) {
       notify('Gagal mengubah status', 'error');
     }
